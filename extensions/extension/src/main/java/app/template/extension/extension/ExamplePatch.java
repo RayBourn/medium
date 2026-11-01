@@ -1,10 +1,14 @@
 package app.template.extension.extension;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
+import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,6 +16,10 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 public class ExamplePatch {
 
@@ -79,23 +87,28 @@ public class ExamplePatch {
             @Override
             public void onClick(View v) {
                 try {
-                    // Get post ID via reflection
-                    Object bundleInfo = fragment.getClass().getMethod("p1").invoke(fragment);
-                    Object targetPost = bundleInfo.getClass().getMethod("getPost").invoke(bundleInfo);
-                    String id = (String) targetPost.getClass().getMethod("getId").invoke(targetPost);
-                    
-                    if (id != null) {
-                        String articleUrl = "https://medium.com/p/" + id;
+                    String target = extractPostUrlOrId(fragment, context);
+                    if (target != null && !target.isEmpty()) {
+                        String articleUrl;
+                        if (target.startsWith("http://") || target.startsWith("https://")) {
+                            articleUrl = target;
+                        } else {
+                            articleUrl = "https://medium.com/p/" + target;
+                        }
+
                         SharedPreferences prefs = context.getSharedPreferences("freedium_prefs", Context.MODE_PRIVATE);
                         String host = prefs.getString("freedium_host", "freedium-mirror.cfd");
                         String freediumUrl = "https://" + host + "/" + articleUrl;
-                        
+
                         // Open the WebView dialog
                         FreediumWebViewDialog dialog = new FreediumWebViewDialog(context, freediumUrl);
                         dialog.show();
+                    } else {
+                        Toast.makeText(context, "Could not determine article ID", Toast.LENGTH_SHORT).show();
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
+                    Toast.makeText(context, "Error opening article: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -111,6 +124,156 @@ public class ExamplePatch {
         // Add button to our overlay, then add overlay to the fragment's root layout
         overlay.addView(button);
         viewGroup.addView(overlay);
+    }
+
+    private static String extractPostUrlOrId(Object fragment, Context context) {
+        if (fragment == null) return null;
+
+        // Tier 1: Check Fragment arguments (Bundle)
+        try {
+            Method getArgumentsMethod = fragment.getClass().getMethod("getArguments");
+            Object argsObj = getArgumentsMethod.invoke(fragment);
+            if (argsObj instanceof Bundle) {
+                Bundle args = (Bundle) argsObj;
+                String[] candidateKeys = new String[]{
+                        "post_id", "postId", "id", "article_id", "target_post_id",
+                        "post", "url", "post_url", "canonical_url", "uri", "share_url"
+                };
+                for (String key : candidateKeys) {
+                    if (args.containsKey(key)) {
+                        Object val = args.get(key);
+                        if (val instanceof String && !((String) val).trim().isEmpty()) {
+                            return ((String) val).trim();
+                        }
+                    }
+                }
+                for (String key : args.keySet()) {
+                    Object val = args.get(key);
+                    if (val instanceof String) {
+                        String s = ((String) val).trim();
+                        if ((s.startsWith("http://") || s.startsWith("https://")) && s.contains("medium.com")) {
+                            return s;
+                        } else if (s.matches("^[a-fA-F0-9]{10,16}$")) {
+                            return s;
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+
+        // Tier 2: Check parent Activity Intent
+        try {
+            Activity activity = null;
+            if (context instanceof Activity) {
+                activity = (Activity) context;
+            } else {
+                Method getActivityMethod = fragment.getClass().getMethod("getActivity");
+                Object actObj = getActivityMethod.invoke(fragment);
+                if (actObj instanceof Activity) {
+                    activity = (Activity) actObj;
+                }
+            }
+            if (activity != null) {
+                Intent intent = activity.getIntent();
+                if (intent != null) {
+                    Uri data = intent.getData();
+                    if (data != null && data.toString().contains("medium.com")) {
+                        return data.toString();
+                    }
+                    Bundle extras = intent.getExtras();
+                    if (extras != null) {
+                        for (String key : new String[]{"post_id", "postId", "id", "url"}) {
+                            String val = extras.getString(key);
+                            if (val != null && !val.trim().isEmpty()) {
+                                return val.trim();
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+
+        // Tier 3: Dynamic reflection fallback across fragment methods & fields
+        try {
+            // First check legacy "p1" method if present
+            try {
+                Method p1 = fragment.getClass().getMethod("p1");
+                Object bundleInfo = p1.invoke(fragment);
+                if (bundleInfo != null) {
+                    String id = extractIdFromPostObject(bundleInfo);
+                    if (id != null) return id;
+                }
+            } catch (Throwable ignored) {
+            }
+
+            // Inspect 0-arg declared methods on fragment
+            for (Method m : fragment.getClass().getDeclaredMethods()) {
+                if (m.getParameterTypes().length == 0 && m.getReturnType() != void.class && !m.getReturnType().isPrimitive()) {
+                    try {
+                        m.setAccessible(true);
+                        Object candidate = m.invoke(fragment);
+                        if (candidate != null) {
+                            String id = extractIdFromPostObject(candidate);
+                            if (id != null) return id;
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                }
+            }
+
+            // Inspect declared fields on fragment
+            for (Field f : fragment.getClass().getDeclaredFields()) {
+                if (!f.getType().isPrimitive()) {
+                    try {
+                        f.setAccessible(true);
+                        Object candidate = f.get(fragment);
+                        if (candidate != null) {
+                            String id = extractIdFromPostObject(candidate);
+                            if (id != null) return id;
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+
+        return null;
+    }
+
+    private static String extractIdFromPostObject(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof String) {
+            String s = ((String) obj).trim();
+            if (s.contains("medium.com") || s.matches("^[a-fA-F0-9]{10,16}$")) {
+                return s;
+            }
+        }
+        try {
+            Method getId = obj.getClass().getMethod("getId");
+            Object idVal = getId.invoke(obj);
+            if (idVal instanceof String && !((String) idVal).isEmpty()) {
+                return (String) idVal;
+            }
+        } catch (Throwable ignored) {
+        }
+
+        try {
+            Method getPost = obj.getClass().getMethod("getPost");
+            Object targetPost = getPost.invoke(obj);
+            if (targetPost != null) {
+                Method getId = targetPost.getClass().getMethod("getId");
+                Object idVal = getId.invoke(targetPost);
+                if (idVal instanceof String && !((String) idVal).isEmpty()) {
+                    return (String) idVal;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+
+        return null;
     }
 
     public static View wrapSettingsView(View composeView) {
