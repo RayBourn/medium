@@ -2,6 +2,7 @@ package app.template.extension.extension;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -20,11 +21,35 @@ import android.widget.Toast;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ExamplePatch {
 
+    private static final Pattern MEDIUM_URL_PATTERN = Pattern.compile(
+            "https?://[a-zA-Z0-9.-]*(?:medium\\.com|towardsdatascience\\.com|betterprogramming\\.pub|uxdesign\\.cc)/[^\\s\"',;]+"
+    );
+
+    private static final Pattern ID_OR_SLUG_PATTERN = Pattern.compile(
+            "^[a-zA-Z0-9_-]{8,64}$"
+    );
+
+    private static final Pattern TO_STRING_ID_PATTERN = Pattern.compile(
+            "(?:postId|post_id|articleId|article_id|id)[=:]\\s*[\"']?([a-zA-Z0-9_-]{8,64})[\"']?"
+    );
+
     private static int dpToPx(Context context, int dp) {
         return (int) (dp * context.getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private static Activity findActivity(Context context) {
+        while (context instanceof ContextWrapper) {
+            if (context instanceof Activity) {
+                return (Activity) context;
+            }
+            context = ((ContextWrapper) context).getBaseContext();
+        }
+        return null;
     }
 
     public static void onPostFragmentViewCreated(final Object fragment, final View root) {
@@ -33,11 +58,13 @@ public class ExamplePatch {
         final Context context = root.getContext();
 
         // 1. Create a transparent full-screen overlay to guarantee correct layout alignment
-        FrameLayout overlay = new FrameLayout(context);
+        final FrameLayout overlay = new FrameLayout(context);
         overlay.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
         ));
+        overlay.setClickable(false);
+        overlay.setFocusable(false);
 
         // 2. Create the pill-shaped button
         final FrameLayout button = new FrameLayout(context);
@@ -48,6 +75,8 @@ public class ExamplePatch {
         buttonLp.gravity = Gravity.BOTTOM | Gravity.END;
         buttonLp.setMargins(0, 0, dpToPx(context, 16), dpToPx(context, 76));
         button.setLayoutParams(buttonLp);
+        button.setClickable(true);
+        button.setFocusable(true);
 
         // Rounded rectangle background (pill shape)
         GradientDrawable background = new GradientDrawable();
@@ -90,8 +119,13 @@ public class ExamplePatch {
                     String target = extractPostUrlOrId(fragment, context);
                     if (target != null && !target.isEmpty()) {
                         String articleUrl;
+                        target = target.trim();
                         if (target.startsWith("http://") || target.startsWith("https://")) {
                             articleUrl = target;
+                        } else if (target.startsWith("medium.com/") || target.startsWith("www.medium.com/")) {
+                            articleUrl = "https://" + target;
+                        } else if (target.startsWith("/")) {
+                            articleUrl = "https://medium.com" + target;
                         } else {
                             articleUrl = "https://medium.com/p/" + target;
                         }
@@ -100,8 +134,21 @@ public class ExamplePatch {
                         String host = prefs.getString("freedium_host", "freedium-mirror.cfd");
                         String freediumUrl = "https://" + host + "/" + articleUrl;
 
+                        Activity activity = findActivity(context);
+                        if (activity == null && fragment != null) {
+                            try {
+                                Method getActivityMethod = fragment.getClass().getMethod("getActivity");
+                                Object actObj = getActivityMethod.invoke(fragment);
+                                if (actObj instanceof Activity) {
+                                    activity = (Activity) actObj;
+                                }
+                            } catch (Throwable ignored) {
+                            }
+                        }
+                        Context dialogContext = activity != null ? activity : context;
+
                         // Open the WebView dialog
-                        FreediumWebViewDialog dialog = new FreediumWebViewDialog(context, freediumUrl);
+                        FreediumWebViewDialog dialog = new FreediumWebViewDialog(dialogContext, freediumUrl);
                         dialog.show();
                     } else {
                         Toast.makeText(context, "Could not determine article ID", Toast.LENGTH_SHORT).show();
@@ -124,6 +171,130 @@ public class ExamplePatch {
         // Add button to our overlay, then add overlay to the fragment's root layout
         overlay.addView(button);
         viewGroup.addView(overlay);
+
+        overlay.bringToFront();
+        button.bringToFront();
+        root.post(new Runnable() {
+            @Override
+            public void run() {
+                overlay.bringToFront();
+                button.bringToFront();
+            }
+        });
+    }
+
+    private static String cleanStringCandidate(String s) {
+        if (s == null) return null;
+        s = s.trim();
+        if (s.isEmpty()) return null;
+
+        Matcher urlMatcher = MEDIUM_URL_PATTERN.matcher(s);
+        if (urlMatcher.find()) {
+            return urlMatcher.group(0);
+        }
+
+        if (s.startsWith("http://") || s.startsWith("https://")) {
+            return s;
+        }
+
+        if (s.startsWith("medium.com/") || s.startsWith("www.medium.com/")) {
+            return "https://" + s;
+        }
+
+        if (s.startsWith("/") && s.length() > 2) {
+            return "https://medium.com" + s;
+        }
+
+        if (ID_OR_SLUG_PATTERN.matcher(s).matches()) {
+            if (!s.equalsIgnoreCase("settings") && !s.equalsIgnoreCase("null") &&
+                !s.equalsIgnoreCase("undefined") && !s.equalsIgnoreCase("fragment") &&
+                !s.equalsIgnoreCase("activity")) {
+                return s;
+            }
+        }
+
+        return null;
+    }
+
+    private static String extractIdFromPostObject(Object obj) {
+        return extractIdFromPostObject(obj, 0);
+    }
+
+    private static String extractIdFromPostObject(Object obj, int depth) {
+        if (obj == null || depth > 2) return null;
+
+        if (obj instanceof String) {
+            return cleanStringCandidate((String) obj);
+        }
+
+        if (obj instanceof Uri) {
+            return cleanStringCandidate(obj.toString());
+        }
+
+        String[] methodNames = new String[]{
+                "getPostId", "getId", "getUrl", "getCanonicalUrl", "getShareUrl",
+                "getWebUrl", "getSlug", "getPost", "getArticle", "getStory",
+                "getPostModel", "getPostMetadata", "getFeedItem"
+        };
+
+        for (String methodName : methodNames) {
+            try {
+                Method m = obj.getClass().getMethod(methodName);
+                if (m.getParameterTypes().length == 0 && m.getReturnType() != void.class) {
+                    Object res = m.invoke(obj);
+                    if (res != null) {
+                        if (res instanceof String) {
+                            String cleaned = cleanStringCandidate((String) res);
+                            if (cleaned != null) return cleaned;
+                        } else {
+                            String nested = extractIdFromPostObject(res, depth + 1);
+                            if (nested != null) return nested;
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
+        String[] fieldNames = new String[]{
+                "postId", "id", "url", "canonicalUrl", "shareUrl", "webUrl", "slug", "post", "article"
+        };
+        for (String fieldName : fieldNames) {
+            try {
+                Field f = obj.getClass().getField(fieldName);
+                Object val = f.get(obj);
+                if (val != null) {
+                    if (val instanceof String) {
+                        String cleaned = cleanStringCandidate((String) val);
+                        if (cleaned != null) return cleaned;
+                    } else {
+                        String nested = extractIdFromPostObject(val, depth + 1);
+                        if (nested != null) return nested;
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
+        try {
+            String str = obj.toString();
+            if (str != null && !str.isEmpty()) {
+                Matcher m = MEDIUM_URL_PATTERN.matcher(str);
+                if (m.find()) {
+                    return m.group(0);
+                }
+                Matcher idMatcher = TO_STRING_ID_PATTERN.matcher(str);
+                if (idMatcher.find()) {
+                    String candidate = idMatcher.group(1);
+                    if (candidate != null && !candidate.isEmpty()) {
+                        return candidate;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+
+        return null;
     }
 
     private static String extractPostUrlOrId(Object fragment, Context context) {
@@ -136,26 +307,23 @@ public class ExamplePatch {
             if (argsObj instanceof Bundle) {
                 Bundle args = (Bundle) argsObj;
                 String[] candidateKeys = new String[]{
-                        "post_id", "postId", "id", "article_id", "target_post_id",
-                        "post", "url", "post_url", "canonical_url", "uri", "share_url"
+                        "post_id", "postId", "id", "article_id", "articleId", "target_post_id",
+                        "post", "url", "post_url", "canonical_url", "uri", "share_url", "web_url", "slug"
                 };
                 for (String key : candidateKeys) {
                     if (args.containsKey(key)) {
                         Object val = args.get(key);
-                        if (val instanceof String && !((String) val).trim().isEmpty()) {
-                            return ((String) val).trim();
+                        String candidate = extractIdFromPostObject(val);
+                        if (candidate != null) {
+                            return candidate;
                         }
                     }
                 }
                 for (String key : args.keySet()) {
                     Object val = args.get(key);
-                    if (val instanceof String) {
-                        String s = ((String) val).trim();
-                        if ((s.startsWith("http://") || s.startsWith("https://")) && s.contains("medium.com")) {
-                            return s;
-                        } else if (s.matches("^[a-fA-F0-9]{10,16}$")) {
-                            return s;
-                        }
+                    String candidate = extractIdFromPostObject(val);
+                    if (candidate != null) {
+                        return candidate;
                     }
                 }
             }
@@ -164,111 +332,82 @@ public class ExamplePatch {
 
         // Tier 2: Check parent Activity Intent
         try {
-            Activity activity = null;
-            if (context instanceof Activity) {
-                activity = (Activity) context;
-            } else {
-                Method getActivityMethod = fragment.getClass().getMethod("getActivity");
-                Object actObj = getActivityMethod.invoke(fragment);
-                if (actObj instanceof Activity) {
-                    activity = (Activity) actObj;
+            Activity activity = findActivity(context);
+            if (activity == null) {
+                try {
+                    Method getActivityMethod = fragment.getClass().getMethod("getActivity");
+                    Object actObj = getActivityMethod.invoke(fragment);
+                    if (actObj instanceof Activity) {
+                        activity = (Activity) actObj;
+                    }
+                } catch (Throwable ignored) {
                 }
             }
             if (activity != null) {
                 Intent intent = activity.getIntent();
                 if (intent != null) {
                     Uri data = intent.getData();
-                    if (data != null && data.toString().contains("medium.com")) {
-                        return data.toString();
+                    if (data != null) {
+                        String cleaned = cleanStringCandidate(data.toString());
+                        if (cleaned != null) return cleaned;
                     }
                     Bundle extras = intent.getExtras();
                     if (extras != null) {
-                        for (String key : new String[]{"post_id", "postId", "id", "url"}) {
-                            String val = extras.getString(key);
-                            if (val != null && !val.trim().isEmpty()) {
-                                return val.trim();
+                        String[] candidateKeys = new String[]{
+                                "post_id", "postId", "id", "article_id", "articleId", "target_post_id",
+                                "post", "url", "post_url", "canonical_url", "uri", "share_url", "web_url", "slug"
+                        };
+                        for (String key : candidateKeys) {
+                            if (extras.containsKey(key)) {
+                                Object val = extras.get(key);
+                                String candidate = extractIdFromPostObject(val);
+                                if (candidate != null) return candidate;
                             }
                         }
-                    }
-                }
-            }
-        } catch (Throwable ignored) {
-        }
-
-        // Tier 3: Dynamic reflection fallback across fragment methods & fields
-        try {
-            // First check legacy "p1" method if present
-            try {
-                Method p1 = fragment.getClass().getMethod("p1");
-                Object bundleInfo = p1.invoke(fragment);
-                if (bundleInfo != null) {
-                    String id = extractIdFromPostObject(bundleInfo);
-                    if (id != null) return id;
-                }
-            } catch (Throwable ignored) {
-            }
-
-            // Inspect 0-arg declared methods on fragment
-            for (Method m : fragment.getClass().getDeclaredMethods()) {
-                if (m.getParameterTypes().length == 0 && m.getReturnType() != void.class && !m.getReturnType().isPrimitive()) {
-                    try {
-                        m.setAccessible(true);
-                        Object candidate = m.invoke(fragment);
-                        if (candidate != null) {
-                            String id = extractIdFromPostObject(candidate);
-                            if (id != null) return id;
+                        for (String key : extras.keySet()) {
+                            Object val = extras.get(key);
+                            String candidate = extractIdFromPostObject(val);
+                            if (candidate != null) return candidate;
                         }
-                    } catch (Throwable ignored) {
                     }
                 }
             }
+        } catch (Throwable ignored) {
+        }
 
-            // Inspect declared fields on fragment
-            for (Field f : fragment.getClass().getDeclaredFields()) {
-                if (!f.getType().isPrimitive()) {
-                    try {
-                        f.setAccessible(true);
-                        Object candidate = f.get(fragment);
-                        if (candidate != null) {
-                            String id = extractIdFromPostObject(candidate);
-                            if (id != null) return id;
+        // Tier 3: Dynamic reflection fallback across fragment methods & fields (including superclasses)
+        try {
+            Class<?> curr = fragment.getClass();
+            while (curr != null && curr != Object.class) {
+                for (Method m : curr.getDeclaredMethods()) {
+                    if (m.getParameterTypes().length == 0 && m.getReturnType() != void.class && !m.getReturnType().isPrimitive()) {
+                        try {
+                            m.setAccessible(true);
+                            Object candidate = m.invoke(fragment);
+                            if (candidate != null) {
+                                String id = extractIdFromPostObject(candidate);
+                                if (id != null) return id;
+                            }
+                        } catch (Throwable ignored) {
                         }
-                    } catch (Throwable ignored) {
                     }
                 }
-            }
-        } catch (Throwable ignored) {
-        }
 
-        return null;
-    }
-
-    private static String extractIdFromPostObject(Object obj) {
-        if (obj == null) return null;
-        if (obj instanceof String) {
-            String s = ((String) obj).trim();
-            if (s.contains("medium.com") || s.matches("^[a-fA-F0-9]{10,16}$")) {
-                return s;
-            }
-        }
-        try {
-            Method getId = obj.getClass().getMethod("getId");
-            Object idVal = getId.invoke(obj);
-            if (idVal instanceof String && !((String) idVal).isEmpty()) {
-                return (String) idVal;
-            }
-        } catch (Throwable ignored) {
-        }
-
-        try {
-            Method getPost = obj.getClass().getMethod("getPost");
-            Object targetPost = getPost.invoke(obj);
-            if (targetPost != null) {
-                Method getId = targetPost.getClass().getMethod("getId");
-                Object idVal = getId.invoke(targetPost);
-                if (idVal instanceof String && !((String) idVal).isEmpty()) {
-                    return (String) idVal;
+                for (Field f : curr.getDeclaredFields()) {
+                    if (!f.getType().isPrimitive()) {
+                        try {
+                            f.setAccessible(true);
+                            Object candidate = f.get(fragment);
+                            if (candidate != null) {
+                                String id = extractIdFromPostObject(candidate);
+                                if (id != null) return id;
+                            }
+                        } catch (Throwable ignored) {
+                        }
+                    }
                 }
+
+                curr = curr.getSuperclass();
             }
         } catch (Throwable ignored) {
         }

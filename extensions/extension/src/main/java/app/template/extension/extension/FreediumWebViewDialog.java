@@ -23,6 +23,21 @@ public class FreediumWebViewDialog extends Dialog {
     private WebView webView;
     private volatile boolean isLightboxOpen = false;
 
+    public static class LightboxBridge {
+        private final FreediumWebViewDialog dialog;
+
+        public LightboxBridge(FreediumWebViewDialog dialog) {
+            this.dialog = dialog;
+        }
+
+        @JavascriptInterface
+        public void setLightboxVisible(boolean visible) {
+            if (dialog != null) {
+                dialog.isLightboxOpen = visible;
+            }
+        }
+    }
+
     public FreediumWebViewDialog(Context context, String url) {
         super(context, android.R.style.Theme_DeviceDefault_NoActionBar);
         this.url = url;
@@ -155,18 +170,22 @@ public class FreediumWebViewDialog extends Dialog {
         settings.setLoadWithOverviewMode(false);
         settings.setTextZoom(100);
 
-        webView.addJavascriptInterface(new Object() {
-            @JavascriptInterface
-            public void setLightboxVisible(boolean visible) {
-                isLightboxOpen = visible;
-            }
-        }, "AndroidBridge");
+        webView.addJavascriptInterface(new LightboxBridge(this), "AndroidBridge");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 view.loadUrl(url);
                 return true;
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                if (request != null && request.getUrl() != null) {
+                    view.loadUrl(request.getUrl().toString());
+                    return true;
+                }
+                return false;
             }
 
             @Override
