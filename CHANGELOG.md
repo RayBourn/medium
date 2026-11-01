@@ -1,3 +1,9 @@
+## [1.10.2](https://github.com/RayBourn/medium/compare/v1.10.1...v1.10.2) (2026-11-01)
+
+### 🐛 Bug Fixes
+
+* **medium:** enforce 1:1 mobile viewport and expand reading width to match native medium ([ec05e16](https://github.com/RayBourn/medium/commit/ec05e160ff7058b9537169358f5f3a8e161020f6))
+
 ## [1.10.1](https://github.com/RayBourn/medium/compare/v1.10.0...v1.10.1) (2026-11-01)
 
 ### 🐛 Bug Fixes
