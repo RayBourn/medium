@@ -1,3 +1,9 @@
+## [1.9.0](https://github.com/RayBourn/medium/compare/v1.8.2...v1.9.0) (2026-11-01)
+
+### ✨ New Features
+
+* add GitHub Actions workflow for automated releases and update semantic-release config ([d5358b7](https://github.com/RayBourn/medium/commit/d5358b7fc5723a986616975dc6c4c95183f3e2a5))
+
 ## [1.8.2](https://github.com/RayBourn/medium/compare/v1.8.1...v1.8.2) (2026-11-01)
 
 ### 🐛 Bug Fixes
