@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-01T17:13:20",
-  "description": "## [1.11.1](https://github.com/RayBourn/medium/compare/v1.11.0...v1.11.1) (2026-11-01)\n\n### 🐛 Bug Fixes\n\n* **medium:** eliminate double-padded margins and use full-bleed image breakouts ([d3b47d2](https://github.com/RayBourn/medium/commit/d3b47d21141adc15e66d4fa5cba68991db1fe8f6))",
-  "download_url": "https://github.com/RayBourn/medium/releases/download/v1.11.1/patches-1.11.1.mpp",
+  "created_at": "2026-11-01T17:25:38",
+  "description": "## [1.11.2](https://github.com/RayBourn/medium/compare/v1.11.1...v1.11.2) (2026-11-01)\n\n### 🐛 Bug Fixes\n\n* **medium:** prevent images from bleeding off-screen and remove negative margins ([b39f750](https://github.com/RayBourn/medium/commit/b39f75043769690acfd0170f300d2a2dbe776d3f))",
+  "download_url": "https://github.com/RayBourn/medium/releases/download/v1.11.2/patches-1.11.2.mpp",
   "signature_download_url": "",
-  "version": "1.11.1"
+  "version": "1.11.2"
 }

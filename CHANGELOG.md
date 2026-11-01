@@ -1,3 +1,9 @@
+## [1.11.2](https://github.com/RayBourn/medium/compare/v1.11.1...v1.11.2) (2026-11-01)
+
+### 🐛 Bug Fixes
+
+* **medium:** prevent images from bleeding off-screen and remove negative margins ([b39f750](https://github.com/RayBourn/medium/commit/b39f75043769690acfd0170f300d2a2dbe776d3f))
+
 ## [1.11.1](https://github.com/RayBourn/medium/compare/v1.11.0...v1.11.1) (2026-11-01)
 
 ### 🐛 Bug Fixes
