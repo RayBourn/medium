@@ -1,3 +1,13 @@
+## [1.8.2](https://github.com/RayBourn/medium/compare/v1.8.1...v1.8.2) (2026-11-01)
+
+### 🐛 Bug Fixes
+
+* add refactor release rule and actor env for release workflow ([1a7af73](https://github.com/RayBourn/medium/commit/1a7af7389e5721bb53a0d3270ed988642a7632e0))
+
+### 🛠️ Refactoring
+
+* **medium:** resilient article resolution and webview error fallback for freedium patch ([2aaa27f](https://github.com/RayBourn/medium/commit/2aaa27f95b6488c328139875fd7d1198a09c9423))
+
 ## 1.0.0 (2026-11-01)
 
 ### 🐛 Bug Fixes
