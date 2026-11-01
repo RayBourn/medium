@@ -1,3 +1,9 @@
+## [1.10.1](https://github.com/RayBourn/medium/compare/v1.10.0...v1.10.1) (2026-11-01)
+
+### 🐛 Bug Fixes
+
+* **medium:** enhance readability with medium typography, correct light contrast, and full mobile width ([1424cac](https://github.com/RayBourn/medium/commit/1424cac860e78c2b96c430fbede493fbb7fee498))
+
 ## [1.10.0](https://github.com/RayBourn/medium/compare/v1.9.0...v1.10.0) (2026-11-01)
 
 ### ✨ New Features
