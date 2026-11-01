@@ -1,3 +1,9 @@
+## [1.11.0](https://github.com/RayBourn/medium/compare/v1.10.2...v1.11.0) (2026-11-01)
+
+### ✨ New Features
+
+* **medium:** support full screen width images and pinch-to-zoom lightbox viewer ([e89f65e](https://github.com/RayBourn/medium/commit/e89f65e9b03fffa6ef4233b989d735bc13e3d163))
+
 ## [1.10.2](https://github.com/RayBourn/medium/compare/v1.10.1...v1.10.2) (2026-11-01)
 
 ### 🐛 Bug Fixes
