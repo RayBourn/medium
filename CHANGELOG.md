@@ -1,3 +1,9 @@
+## [1.11.1](https://github.com/RayBourn/medium/compare/v1.11.0...v1.11.1) (2026-11-01)
+
+### 🐛 Bug Fixes
+
+* **medium:** eliminate double-padded margins and use full-bleed image breakouts ([d3b47d2](https://github.com/RayBourn/medium/commit/d3b47d21141adc15e66d4fa5cba68991db1fe8f6))
+
 ## [1.11.0](https://github.com/RayBourn/medium/compare/v1.10.2...v1.11.0) (2026-11-01)
 
 ### ✨ New Features

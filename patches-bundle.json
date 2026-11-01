@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-01T17:00:10",
-  "description": "## [1.11.0](https://github.com/RayBourn/medium/compare/v1.10.2...v1.11.0) (2026-11-01)\n\n### ✨ New Features\n\n* **medium:** support full screen width images and pinch-to-zoom lightbox viewer ([e89f65e](https://github.com/RayBourn/medium/commit/e89f65e9b03fffa6ef4233b989d735bc13e3d163))",
-  "download_url": "https://github.com/RayBourn/medium/releases/download/v1.11.0/patches-1.11.0.mpp",
+  "created_at": "2026-11-01T17:13:20",
+  "description": "## [1.11.1](https://github.com/RayBourn/medium/compare/v1.11.0...v1.11.1) (2026-11-01)\n\n### 🐛 Bug Fixes\n\n* **medium:** eliminate double-padded margins and use full-bleed image breakouts ([d3b47d2](https://github.com/RayBourn/medium/commit/d3b47d21141adc15e66d4fa5cba68991db1fe8f6))",
+  "download_url": "https://github.com/RayBourn/medium/releases/download/v1.11.1/patches-1.11.1.mpp",
   "signature_download_url": "",
-  "version": "1.11.0"
+  "version": "1.11.1"
 }
