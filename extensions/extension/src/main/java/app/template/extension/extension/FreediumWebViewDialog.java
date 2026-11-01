@@ -2,14 +2,9 @@ package app.template.extension.extension;
 
 import android.app.Dialog;
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Bundle;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -20,16 +15,11 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
 public class FreediumWebViewDialog extends Dialog {
     private final String url;
-
-    private static int dpToPx(Context context, int dp) {
-        return (int) (dp * context.getResources().getDisplayMetrics().density + 0.5f);
-    }
+    private WebView webView;
 
     public FreediumWebViewDialog(Context context, String url) {
         super(context, android.R.style.Theme_DeviceDefault_NoActionBar);
@@ -42,7 +32,7 @@ public class FreediumWebViewDialog extends Dialog {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
 
         final Context context = getContext();
-        boolean isDarkMode = (context.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) 
+        final boolean isDarkMode = (context.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) 
                 == android.content.res.Configuration.UI_MODE_NIGHT_YES;
 
         Window window = getWindow();
@@ -58,31 +48,32 @@ public class FreediumWebViewDialog extends Dialog {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                     int flags = window.getDecorView().getSystemUiVisibility();
                     if (isDarkMode) {
-                        flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR; // Light status bar text
+                        flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
                     } else {
-                        flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR; // Dark status bar text
+                        flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
                     }
                     window.getDecorView().setSystemUiVisibility(flags);
                 }
             }
         }
 
-        // Use fitsSystemWindows to prevent drawing content underneath the status bar
         FrameLayout rootLayout = new FrameLayout(context);
         rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
         ));
         rootLayout.setFitsSystemWindows(true);
+        rootLayout.setBackgroundColor(isDarkMode ? Color.BLACK : Color.WHITE);
 
         // Main WebView
-        WebView webView = new WebView(context);
+        webView = new WebView(context);
         webView.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
+        webView.setBackgroundColor(isDarkMode ? Color.BLACK : Color.WHITE);
 
-        // Loading WebView
+        // Loading Overlay
         final WebView loaderWebView = new WebView(context);
         loaderWebView.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -142,11 +133,11 @@ public class FreediumWebViewDialog extends Dialog {
                 
         loaderWebView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
 
-        // Safety timeout: automatically hide loader after 8 seconds so user is never stuck
         loaderWebView.postDelayed(new Runnable() {
             @Override
             public void run() {
                 if (loaderWebView.getVisibility() == View.VISIBLE) {
+                    injectCleanStyles(webView, isDarkMode);
                     loaderWebView.setVisibility(View.GONE);
                 }
             }
@@ -167,8 +158,15 @@ public class FreediumWebViewDialog extends Dialog {
             }
 
             @Override
+            public void onPageCommitVisible(WebView view, String url) {
+                super.onPageCommitVisible(view, url);
+                injectCleanStyles(view, isDarkMode);
+            }
+
+            @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
+                injectCleanStyles(view, isDarkMode);
                 loaderWebView.setVisibility(View.GONE);
             }
 
@@ -198,74 +196,69 @@ public class FreediumWebViewDialog extends Dialog {
         rootLayout.addView(webView);
         rootLayout.addView(loaderWebView);
 
-        // Top controls bar: Close (left) and Open in Browser (right)
-        LinearLayout topControls = new LinearLayout(context);
-        topControls.setOrientation(LinearLayout.HORIZONTAL);
-        FrameLayout.LayoutParams topLp = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        topLp.gravity = Gravity.TOP;
-        topLp.setMargins(dpToPx(context, 12), dpToPx(context, 10), dpToPx(context, 12), 0);
-        topControls.setLayoutParams(topLp);
-
-        // Close Button
-        TextView closeBtn = new TextView(context);
-        closeBtn.setText("✕ Close");
-        closeBtn.setTextSize(13);
-        closeBtn.setTypeface(Typeface.DEFAULT_BOLD);
-        closeBtn.setTextColor(Color.WHITE);
-        closeBtn.setPadding(dpToPx(context, 14), dpToPx(context, 8), dpToPx(context, 14), dpToPx(context, 8));
-
-        GradientDrawable closeBg = new GradientDrawable();
-        closeBg.setShape(GradientDrawable.RECTANGLE);
-        closeBg.setCornerRadius(dpToPx(context, 16));
-        closeBg.setColor(Color.parseColor("#80000000")); // Semi-transparent black
-        closeBtn.setBackground(closeBg);
-        closeBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dismiss();
-            }
-        });
-        topControls.addView(closeBtn);
-
-        // Spacer
-        View spacer = new View(context);
-        LinearLayout.LayoutParams spacerLp = new LinearLayout.LayoutParams(0, 1, 1.0f);
-        spacer.setLayoutParams(spacerLp);
-        topControls.addView(spacer);
-
-        // Open in Browser Button
-        TextView browserBtn = new TextView(context);
-        browserBtn.setText("↗ Open in Browser");
-        browserBtn.setTextSize(13);
-        browserBtn.setTypeface(Typeface.DEFAULT_BOLD);
-        browserBtn.setTextColor(Color.WHITE);
-        browserBtn.setPadding(dpToPx(context, 14), dpToPx(context, 8), dpToPx(context, 14), dpToPx(context, 8));
-
-        GradientDrawable browserBg = new GradientDrawable();
-        browserBg.setShape(GradientDrawable.RECTANGLE);
-        browserBg.setCornerRadius(dpToPx(context, 16));
-        browserBg.setColor(Color.parseColor("#CC02B875")); // Medium Green with slight transparency
-        browserBtn.setBackground(browserBg);
-        browserBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                    browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    context.startActivity(browserIntent);
-                } catch (Exception e) {
-                    Toast.makeText(context, "Cannot open browser: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-        topControls.addView(browserBtn);
-
-        rootLayout.addView(topControls);
-
         setContentView(rootLayout);
         webView.loadUrl(url);
+    }
+
+    private void injectCleanStyles(WebView view, boolean isDarkMode) {
+        if (view == null) return;
+
+        String bg = isDarkMode ? "#000000" : "#FFFFFF";
+        String text = isDarkMode ? "#F8FAFC" : "#0F172A";
+
+        String css =
+                "div[role='alert'], .alert, [class*='alert'], [class*='banner'], [class*='toast'], " +
+                "[class*='notification'], [class*='announcement'], a[href*='discord'], header, nav, footer { " +
+                "  display: none !important; " +
+                "} " +
+                "html, body { " +
+                "  margin: 0 !important; " +
+                "  padding: 0 !important; " +
+                "  width: 100% !important; " +
+                "  background-color: " + bg + " !important; " +
+                "  color: " + text + " !important; " +
+                "} " +
+                "main, article, .container, [class*='container'], [class*='card'], [class*='wrapper'], [class*='shadow'], div[class*='max-w-'] { " +
+                "  max-width: 100% !important; " +
+                "  width: 100% !important; " +
+                "  margin: 0 auto !important; " +
+                "  padding-left: 18px !important; " +
+                "  padding-right: 18px !important; " +
+                "  box-shadow: none !important; " +
+                "  border: none !important; " +
+                "  border-radius: 0 !important; " +
+                "  background: transparent !important; " +
+                "  background-color: transparent !important; " +
+                "} " +
+                "img, figure { max-width: 100% !important; height: auto !important; border-radius: 4px !important; }";
+
+        String js =
+                "(function() { " +
+                "  var style = document.getElementById('freedium-clean-style'); " +
+                "  if (!style) { " +
+                "    style = document.createElement('style'); " +
+                "    style.id = 'freedium-clean-style'; " +
+                "    style.innerHTML = `" + css + "`; " +
+                "    if (document.head) { document.head.appendChild(style); } " +
+                "    else if (document.documentElement) { document.documentElement.appendChild(style); } " +
+                "  } " +
+                "  document.querySelectorAll('div, section, aside, [role=\"alert\"]').forEach(function(el) { " +
+                "    var t = el.innerText || ''; " +
+                "    if ((t.includes('new sources supported') || t.includes('Freedium has been updated') || t.includes('Discord')) && !el.querySelector('article')) { " +
+                "      el.style.setProperty('display', 'none', 'important'); " +
+                "    } " +
+                "  }); " +
+                "})();";
+
+        view.evaluateJavascript(js, null);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
     }
 }

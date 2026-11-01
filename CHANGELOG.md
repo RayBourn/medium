@@ -1,3 +1,9 @@
+## [1.10.0](https://github.com/RayBourn/medium/compare/v1.9.0...v1.10.0) (2026-11-01)
+
+### ✨ New Features
+
+* **medium:** remove overlays, unbox article layout, and clean full-screen reading view ([e268f25](https://github.com/RayBourn/medium/commit/e268f2521e61e01cb79f99205c854de9e0b60a0a))
+
 ## [1.9.0](https://github.com/RayBourn/medium/compare/v1.8.2...v1.9.0) (2026-11-01)
 
 ### ✨ New Features

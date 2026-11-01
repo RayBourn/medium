@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-01T15:27:07",
-  "description": "## [1.9.0](https://github.com/RayBourn/medium/compare/v1.8.2...v1.9.0) (2026-11-01)\n\n### ✨ New Features\n\n* add GitHub Actions workflow for automated releases and update semantic-release config ([d5358b7](https://github.com/RayBourn/medium/commit/d5358b7fc5723a986616975dc6c4c95183f3e2a5))",
-  "download_url": "https://github.com/RayBourn/medium/releases/download/v1.9.0/patches-1.9.0.mpp",
+  "created_at": "2026-11-01T15:46:26",
+  "description": "## [1.10.0](https://github.com/RayBourn/medium/compare/v1.9.0...v1.10.0) (2026-11-01)\n\n### ✨ New Features\n\n* **medium:** remove overlays, unbox article layout, and clean full-screen reading view ([e268f25](https://github.com/RayBourn/medium/commit/e268f2521e61e01cb79f99205c854de9e0b60a0a))",
+  "download_url": "https://github.com/RayBourn/medium/releases/download/v1.10.0/patches-1.10.0.mpp",
   "signature_download_url": "",
-  "version": "1.9.0"
+  "version": "1.10.0"
 }
