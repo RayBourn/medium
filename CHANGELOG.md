@@ -1,3 +1,14 @@
+## [1.9.0-dev.1](https://github.com/RayBourn/medium/compare/v1.8.1...v1.9.0-dev.1) (2026-11-01)
+
+### 🐛 Bug Fixes
+
+* port Freedium patch to 4.5.1784910928 ([2146c33](https://github.com/RayBourn/medium/commit/2146c3308cc5d3b7cf8afe5275f95e17da00f530))
+* port MyGate patch to 7.38.2 ([40c51ac](https://github.com/RayBourn/medium/commit/40c51acbc8b89ec5781423729d1714d1c273bde8))
+
+### ✨ New Features
+
+* merge mygate patches into single patch, fix workflows, update version to 7.31.0 ([f23039c](https://github.com/RayBourn/medium/commit/f23039c22616311677d68acc394ead875ba91113))
+
 ## [1.8.1](https://github.com/bufferk/morphe-patches/compare/v1.8.0...v1.8.1) (2026-10-25)
 
 ### 🐛 Bug Fixes
