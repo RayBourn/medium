@@ -147,10 +147,10 @@ public class FreediumWebViewDialog extends Dialog {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setSupportZoom(true);
-        settings.setBuiltInZoomControls(true);
+        settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
-        settings.setUseWideViewPort(true);
-        settings.setLoadWithOverviewMode(true);
+        settings.setUseWideViewPort(false);
+        settings.setLoadWithOverviewMode(false);
         settings.setTextZoom(100);
 
         webView.setWebViewClient(new WebViewClient() {
@@ -210,6 +210,9 @@ public class FreediumWebViewDialog extends Dialog {
         String bodyText = isDarkMode ? "#E8E8E8" : "#242424";
         String headingText = isDarkMode ? "#FFFFFF" : "#0F172A";
         String subText = isDarkMode ? "#94A3B8" : "#6B7280";
+        String borderColor = isDarkMode ? "#333333" : "#E5E7EB";
+        String btnBg = isDarkMode ? "#262626" : "#F3F4F6";
+        String btnText = isDarkMode ? "#FFFFFF" : "#1F2937";
 
         String css =
                 "div[role='alert'], .alert, [class*='alert'], [class*='banner'], [class*='toast'], " +
@@ -220,24 +223,56 @@ public class FreediumWebViewDialog extends Dialog {
                 "  margin: 0 !important; " +
                 "  padding: 0 !important; " +
                 "  width: 100% !important; " +
+                "  min-width: 100% !important; " +
                 "  max-width: 100% !important; " +
                 "  background-color: " + bg + " !important; " +
                 "  color: " + bodyText + " !important; " +
                 "  overflow-x: hidden !important; " +
+                "  box-sizing: border-box !important; " +
                 "} " +
-                "main, article, .prose, [class*='prose'], .container, [class*='container'], [class*='card'], [class*='wrapper'], div[class*='max-w-'], div[class*='mx-auto'], [class*='shadow'] { " +
-                "  max-width: 100% !important; " +
+                "main, #svelte, [class*='wrapper'], [class*='card'], [class*='shadow'], div[class*='max-w-'], div[class*='mx-auto'], .container, [class*='container'] { " +
                 "  width: 100% !important; " +
+                "  max-width: 100% !important; " +
                 "  margin-left: 0 !important; " +
                 "  margin-right: 0 !important; " +
-                "  padding-left: 20px !important; " +
-                "  padding-right: 20px !important; " +
-                "  box-sizing: border-box !important; " +
+                "  padding-left: 0 !important; " +
+                "  padding-right: 0 !important; " +
                 "  box-shadow: none !important; " +
                 "  border: none !important; " +
                 "  border-radius: 0 !important; " +
                 "  background: transparent !important; " +
                 "  background-color: transparent !important; " +
+                "  box-sizing: border-box !important; " +
+                "} " +
+                "article, .prose, [class*='prose'] { " +
+                "  width: 100% !important; " +
+                "  max-width: 100% !important; " +
+                "  margin: 0 auto !important; " +
+                "  padding-left: 18px !important; " +
+                "  padding-right: 18px !important; " +
+                "  box-sizing: border-box !important; " +
+                "  background: transparent !important; " +
+                "  background-color: transparent !important; " +
+                "} " +
+                "a[href*='download'], button[class*='download'], [class*='download'] { " +
+                "  display: inline-flex !important; " +
+                "  align-items: center !important; " +
+                "  justify-content: center !important; " +
+                "  background-color: " + btnBg + " !important; " +
+                "  color: " + btnText + " !important; " +
+                "  border: 1px solid " + borderColor + " !important; " +
+                "  border-radius: 9999px !important; " +
+                "  padding: 8px 18px !important; " +
+                "  font-size: 14px !important; " +
+                "  font-weight: 500 !important; " +
+                "  text-decoration: none !important; " +
+                "  margin: 12px auto !important; " +
+                "  box-sizing: border-box !important; " +
+                "} " +
+                "details, summary, .collapse, [class*='collapse'] { " +
+                "  background-color: transparent !important; " +
+                "  color: inherit !important; " +
+                "  border-color: " + borderColor + " !important; " +
                 "} " +
                 "p, li, blockquote, dd, dt { " +
                 "  font-family: 'Charter', 'Georgia', 'Cambria', 'Times New Roman', serif !important; " +
@@ -273,6 +308,7 @@ public class FreediumWebViewDialog extends Dialog {
                 "  font-size: 14px !important; " +
                 "  color: " + subText + " !important; " +
                 "  text-align: center !important; " +
+                "  display: block !important; " +
                 "} " +
                 "img, figure { " +
                 "  max-width: 100% !important; " +
