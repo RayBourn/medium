@@ -1,3 +1,9 @@
+## [1.11.3](https://github.com/RayBourn/medium/compare/v1.11.2...v1.11.3) (2026-11-01)
+
+### 🐛 Bug Fixes
+
+* **medium:** harden article resolution, activity context, and webview bridge ([e84737f](https://github.com/RayBourn/medium/commit/e84737fea0a97f6343c4fd1de5b1b7a4b765a1c5))
+
 ## [1.11.2](https://github.com/RayBourn/medium/compare/v1.11.1...v1.11.2) (2026-11-01)
 
 ### 🐛 Bug Fixes
