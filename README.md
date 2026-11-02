@@ -76,7 +76,7 @@ This repository provides custom, community-developed bytecode patches for variou
 ## 🩹 Patches
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.11.3](https://github.com/RayBourn/medium/releases/tag/v1.11.3)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;13 patches total
+> **[v1.12.0](https://github.com/RayBourn/medium/releases/tag/v1.12.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;13 patches total
 <details open>
 <summary>📦 Brave Browser&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
 <br>
