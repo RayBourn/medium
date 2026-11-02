@@ -215,8 +215,10 @@ public class FreediumWebViewDialog extends Dialog {
                         downloadHttpFile(reqUrl, guessName, null);
                         return true;
                     }
+                    view.loadUrl(reqUrl);
+                    return true;
                 }
-                return super.shouldOverrideUrlLoading(view, request);
+                return true;
             }
 
             @Override
@@ -276,9 +278,8 @@ public class FreediumWebViewDialog extends Dialog {
         String css =
                 "div[role='alert'], .alert, [class*='alert'], [class*='banner'], [class*='toast'], " +
                 "[class*='notification'], [class*='announcement'], a[href*='discord'], header, nav, footer, " +
-                "#toc-heading, #toc-list, [id*='toc'], [class*='toc-'], " +
-                "div:has(> #toc-heading), div:has(> #toc-list), div:has(#toc-heading), div:has(#toc-list), " +
-                "div[data-nosnippet]:has(#toc-heading) { " +
+                "#toc-heading, #toc-list, " +
+                "div[data-nosnippet]:has(#toc-heading), div[data-nosnippet]:has(#toc-list) { " +
                 "  display: none !important; " +
                 "} " +
                 "html, body { " +
@@ -543,21 +544,12 @@ public class FreediumWebViewDialog extends Dialog {
                 "      el.style.setProperty('display', 'none', 'important'); " +
                 "    } " +
                 "  }); " +
-                "  document.querySelectorAll('#toc-heading, #toc-list, [id*=\"toc\"]').forEach(function(el) { " +
-                "    var p = el.closest('div[data-nosnippet]') || el.closest('div[class*=\"border\"]') || el.closest('.card') || el.parentElement; " +
-                "    if (p && p !== document.body && !p.querySelector('article')) { " +
-                "      p.style.setProperty('display', 'none', 'important'); " +
+                "  document.querySelectorAll('#toc-heading, #toc-list').forEach(function(el) { " +
+                "    var tocCard = el.closest('div[data-nosnippet]'); " +
+                "    if (tocCard && !tocCard.querySelector('article')) { " +
+                "      tocCard.style.setProperty('display', 'none', 'important'); " +
                 "    } else { " +
                 "      el.style.setProperty('display', 'none', 'important'); " +
-                "    } " +
-                "  }); " +
-                "  document.querySelectorAll('h2, h3, div').forEach(function(el) { " +
-                "    var t = (el.innerText || '').trim(); " +
-                "    if (t.startsWith('Contents') && (el.id.indexOf('toc') !== -1 || el.querySelector('[id*=\"toc\"]') || el.closest('[id*=\"toc\"]'))) { " +
-                "      var p = el.closest('div[data-nosnippet]') || el.parentElement; " +
-                "      if (p && !p.querySelector('article')) { " +
-                "        p.style.setProperty('display', 'none', 'important'); " +
-                "      } " +
                 "    } " +
                 "  }); " +
                 "  var lb = document.getElementById('freedium-lightbox'); " +
