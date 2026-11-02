@@ -1,15 +1,26 @@
 package app.template.extension.extension;
 
 import android.app.Dialog;
+import android.app.DownloadManager;
+import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Color;
+import android.net.Uri;
 import android.net.http.SslError;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.MediaStore;
+import android.util.Base64;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.webkit.DownloadListener;
 import android.webkit.JavascriptInterface;
 import android.webkit.SslErrorHandler;
+import android.webkit.URLUtil;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -17,6 +28,9 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 
 public class FreediumWebViewDialog extends Dialog {
     private final String url;
@@ -160,13 +174,49 @@ public class FreediumWebViewDialog extends Dialog {
             public void setLightboxVisible(boolean visible) {
                 isLightboxOpen = visible;
             }
+
+            @JavascriptInterface
+            public void saveBase64File(String base64Data, String filename, String mimeType) {
+                FreediumWebViewDialog.this.saveBase64File(base64Data, filename, mimeType);
+            }
+
+            @JavascriptInterface
+            public void downloadHttpFile(String downloadUrl, String filename, String mimeType) {
+                FreediumWebViewDialog.this.downloadHttpFile(downloadUrl, filename, mimeType);
+            }
         }, "AndroidBridge");
+
+        webView.setDownloadListener(new DownloadListener() {
+            @Override
+            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
+                String guessName = URLUtil.guessFileName(url, contentDisposition, mimeType);
+                downloadHttpFile(url, guessName, mimeType);
+            }
+        });
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (url != null && (url.contains("/api/download") || url.endsWith(".md") || url.endsWith(".pdf"))) {
+                    String guessName = URLUtil.guessFileName(url, null, null);
+                    downloadHttpFile(url, guessName, null);
+                    return true;
+                }
                 view.loadUrl(url);
                 return true;
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                if (request != null && request.getUrl() != null) {
+                    String reqUrl = request.getUrl().toString();
+                    if (reqUrl.contains("/api/download") || reqUrl.endsWith(".md") || reqUrl.endsWith(".pdf")) {
+                        String guessName = URLUtil.guessFileName(reqUrl, null, null);
+                        downloadHttpFile(reqUrl, guessName, null);
+                        return true;
+                    }
+                }
+                return super.shouldOverrideUrlLoading(view, request);
             }
 
             @Override
@@ -225,7 +275,10 @@ public class FreediumWebViewDialog extends Dialog {
 
         String css =
                 "div[role='alert'], .alert, [class*='alert'], [class*='banner'], [class*='toast'], " +
-                "[class*='notification'], [class*='announcement'], a[href*='discord'], header, nav, footer { " +
+                "[class*='notification'], [class*='announcement'], a[href*='discord'], header, nav, footer, " +
+                "#toc-heading, #toc-list, [id*='toc'], [class*='toc-'], " +
+                "div:has(> #toc-heading), div:has(> #toc-list), div:has(#toc-heading), div:has(#toc-list), " +
+                "div[data-nosnippet]:has(#toc-heading) { " +
                 "  display: none !important; " +
                 "} " +
                 "html, body { " +
@@ -262,6 +315,14 @@ public class FreediumWebViewDialog extends Dialog {
                 "  box-sizing: border-box !important; " +
                 "  background: transparent !important; " +
                 "  background-color: transparent !important; " +
+                "  --tw-prose-body: " + bodyText + " !important; " +
+                "  --tw-prose-headings: " + headingText + " !important; " +
+                "  --tw-prose-lead: " + bodyText + " !important; " +
+                "  --tw-prose-links: " + bodyText + " !important; " +
+                "  --tw-prose-bold: " + headingText + " !important; " +
+                "  --tw-prose-quotes: " + bodyText + " !important; " +
+                "  --tw-prose-quote-borders: " + bodyText + " !important; " +
+                "  --tw-prose-captions: " + subText + " !important; " +
                 "} " +
                 "a[href*='download'], button[class*='download'], [class*='download'] { " +
                 "  display: inline-flex !important; " +
@@ -285,7 +346,7 @@ public class FreediumWebViewDialog extends Dialog {
                 "  margin: 1rem 0 !important; " +
                 "  box-sizing: border-box !important; " +
                 "} " +
-                "p, li, blockquote, dd, dt { " +
+                "p, li, dd, dt { " +
                 "  font-family: 'Charter', 'Georgia', 'Cambria', 'Times New Roman', serif !important; " +
                 "  font-size: 19px !important; " +
                 "  line-height: 1.68 !important; " +
@@ -295,6 +356,33 @@ public class FreediumWebViewDialog extends Dialog {
                 "  word-break: break-word !important; " +
                 "  padding-left: 0 !important; " +
                 "  padding-right: 0 !important; " +
+                "} " +
+                "blockquote, [class*='quote'] { " +
+                "  border-left: 3px solid " + (isDarkMode ? "#E8E8E8" : "#242424") + " !important; " +
+                "  padding-left: 20px !important; " +
+                "  padding-right: 0 !important; " +
+                "  margin: 1.5rem 0 !important; " +
+                "  font-style: italic !important; " +
+                "  color: " + bodyText + " !important; " +
+                "  box-sizing: border-box !important; " +
+                "} " +
+                "blockquote p, blockquote li, blockquote div, blockquote em, blockquote span { " +
+                "  padding-left: 0 !important; " +
+                "  padding-right: 0 !important; " +
+                "  margin-left: 0 !important; " +
+                "  margin-right: 0 !important; " +
+                "  margin-bottom: 0.8rem !important; " +
+                "  font-style: inherit !important; " +
+                "  color: inherit !important; " +
+                "} " +
+                "em, i, strong, b, cite, q { " +
+                "  color: inherit !important; " +
+                "  opacity: 1 !important; " +
+                "} " +
+                "article em, article cite, .prose em, .prose cite, [class*='kicker'] { " +
+                "  color: " + bodyText + " !important; " +
+                "  opacity: 1 !important; " +
+                "  font-style: italic !important; " +
                 "} " +
                 "h1 { " +
                 "  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; " +
@@ -455,6 +543,23 @@ public class FreediumWebViewDialog extends Dialog {
                 "      el.style.setProperty('display', 'none', 'important'); " +
                 "    } " +
                 "  }); " +
+                "  document.querySelectorAll('#toc-heading, #toc-list, [id*=\"toc\"]').forEach(function(el) { " +
+                "    var p = el.closest('div[data-nosnippet]') || el.closest('div[class*=\"border\"]') || el.closest('.card') || el.parentElement; " +
+                "    if (p && p !== document.body && !p.querySelector('article')) { " +
+                "      p.style.setProperty('display', 'none', 'important'); " +
+                "    } else { " +
+                "      el.style.setProperty('display', 'none', 'important'); " +
+                "    } " +
+                "  }); " +
+                "  document.querySelectorAll('h2, h3, div').forEach(function(el) { " +
+                "    var t = (el.innerText || '').trim(); " +
+                "    if (t.startsWith('Contents') && (el.id.indexOf('toc') !== -1 || el.querySelector('[id*=\"toc\"]') || el.closest('[id*=\"toc\"]'))) { " +
+                "      var p = el.closest('div[data-nosnippet]') || el.parentElement; " +
+                "      if (p && !p.querySelector('article')) { " +
+                "        p.style.setProperty('display', 'none', 'important'); " +
+                "      } " +
+                "    } " +
+                "  }); " +
                 "  var lb = document.getElementById('freedium-lightbox'); " +
                 "  if (!lb) { " +
                 "    lb = document.createElement('div'); " +
@@ -546,9 +651,214 @@ public class FreediumWebViewDialog extends Dialog {
                 "      if (src && window.openFreediumLightbox) { window.openFreediumLightbox(src, cap); } " +
                 "    }; " +
                 "  }); " +
+                "  if (!window._freediumDownloadHooked) { " +
+                "    window._freediumDownloadHooked = true; " +
+                "    var blobMap = {}; " +
+                "    var origCreate = URL.createObjectURL; " +
+                "    if (origCreate) { " +
+                "      URL.createObjectURL = function(blob) { " +
+                "        var u = origCreate.apply(URL, arguments); " +
+                "        try { blobMap[u] = blob; } catch(e) {} " +
+                "        return u; " +
+                "      }; " +
+                "    } " +
+                "    var origRevoke = URL.revokeObjectURL; " +
+                "    if (origRevoke) { " +
+                "      URL.revokeObjectURL = function(u) { " +
+                "        setTimeout(function() { " +
+                "          try { delete blobMap[u]; } catch(e) {} " +
+                "          try { origRevoke.call(URL, u); } catch(e) {} " +
+                "        }, 45000); " +
+                "      }; " +
+                "    } " +
+                "    function sendBlobToBridge(blob, filename, mime) { " +
+                "      var reader = new FileReader(); " +
+                "      reader.onloadend = function() { " +
+                "        if (window.AndroidBridge && window.AndroidBridge.saveBase64File) { " +
+                "          window.AndroidBridge.saveBase64File(reader.result, filename, mime || blob.type || 'application/pdf'); " +
+                "        } " +
+                "      }; " +
+                "      reader.readAsDataURL(blob); " +
+                "    } " +
+                "    function handleBlobUrl(href, filename, mime) { " +
+                "      var b = blobMap[href]; " +
+                "      if (b) { " +
+                "        sendBlobToBridge(b, filename, mime); " +
+                "      } else { " +
+                "        fetch(href) " +
+                "          .then(function(r) { return r.blob(); }) " +
+                "          .then(function(b2) { sendBlobToBridge(b2, filename, mime); }) " +
+                "          .catch(function(err) { console.error('Blob fetch failed', err); }); " +
+                "      } " +
+                "    } " +
+                "    function handleHttpDownload(href, filename, mime) { " +
+                "      fetch(href) " +
+                "        .then(function(r) { return r.blob(); }) " +
+                "        .then(function(b) { sendBlobToBridge(b, filename, mime || b.type || 'text/markdown'); }) " +
+                "        .catch(function() { " +
+                "          if (window.AndroidBridge && window.AndroidBridge.downloadHttpFile) { " +
+                "            window.AndroidBridge.downloadHttpFile(href, filename, mime || 'text/markdown'); " +
+                "          } " +
+                "        }); " +
+                "    } " +
+                "    var origAnchorClick = HTMLAnchorElement.prototype.click; " +
+                "    HTMLAnchorElement.prototype.click = function() { " +
+                "      var href = this.href || this.getAttribute('href') || ''; " +
+                "      var download = this.download || this.getAttribute('download') || ''; " +
+                "      if (href.startsWith('blob:')) { " +
+                "        handleBlobUrl(href, download || 'article.pdf', 'application/pdf'); " +
+                "        return; " +
+                "      } " +
+                "      if (href.indexOf('/api/download') !== -1 || (download && (download.endsWith('.md') || download.endsWith('.pdf')))) { " +
+                "        handleHttpDownload(href, download || 'article.md', 'text/markdown'); " +
+                "        return; " +
+                "      } " +
+                "      return origAnchorClick.apply(this, arguments); " +
+                "    }; " +
+                "    document.addEventListener('click', function(e) { " +
+                "      var a = e.target.closest('a'); " +
+                "      if (!a) return; " +
+                "      var href = a.href || a.getAttribute('href') || ''; " +
+                "      var download = a.download || a.getAttribute('download') || ''; " +
+                "      if (href.startsWith('blob:')) { " +
+                "        e.preventDefault(); e.stopPropagation(); " +
+                "        handleBlobUrl(href, download || 'article.pdf', 'application/pdf'); " +
+                "        return; " +
+                "      } " +
+                "      if (href.indexOf('/api/download') !== -1 || (download && (download.endsWith('.md') || download.endsWith('.pdf')))) { " +
+                "        e.preventDefault(); e.stopPropagation(); " +
+                "        handleHttpDownload(href, download || 'article.md', 'text/markdown'); " +
+                "      } " +
+                "    }, true); " +
+                "  } " +
                 "})();";
 
         view.evaluateJavascript(js, null);
+    }
+
+    public void saveBase64File(final String base64Data, final String filename, final String mimeType) {
+        if (base64Data == null || base64Data.isEmpty()) return;
+        final Context context = getContext();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String cleanBase64 = base64Data;
+                    if (cleanBase64.contains(",")) {
+                        cleanBase64 = cleanBase64.substring(cleanBase64.indexOf(",") + 1);
+                    }
+                    byte[] bytes = Base64.decode(cleanBase64, Base64.DEFAULT);
+
+                    String safeName = (filename != null && !filename.trim().isEmpty()) ? filename : "article";
+                    safeName = safeName.replaceAll("[\\\\/:*?\"<>|]", "_");
+
+                    String resolvedMime = mimeType;
+                    if (resolvedMime == null || resolvedMime.isEmpty()) {
+                        if (safeName.endsWith(".pdf")) {
+                            resolvedMime = "application/pdf";
+                        } else if (safeName.endsWith(".md")) {
+                            resolvedMime = "text/markdown";
+                        } else {
+                            resolvedMime = "application/octet-stream";
+                        }
+                    }
+
+                    boolean success = false;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        ContentValues values = new ContentValues();
+                        values.put(MediaStore.Downloads.DISPLAY_NAME, safeName);
+                        values.put(MediaStore.Downloads.MIME_TYPE, resolvedMime);
+                        values.put(MediaStore.Downloads.IS_PENDING, 1);
+
+                        Uri collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+                        Uri itemUri = context.getContentResolver().insert(collection, values);
+                        if (itemUri != null) {
+                            try (OutputStream out = context.getContentResolver().openOutputStream(itemUri)) {
+                                if (out != null) {
+                                    out.write(bytes);
+                                    out.flush();
+                                    success = true;
+                                }
+                            }
+                            values.clear();
+                            values.put(MediaStore.Downloads.IS_PENDING, 0);
+                            context.getContentResolver().update(itemUri, values, null, null);
+                        }
+                    } else {
+                        File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                        if (!downloadsDir.exists()) {
+                            downloadsDir.mkdirs();
+                        }
+                        File dest = new File(downloadsDir, safeName);
+                        try (FileOutputStream fos = new FileOutputStream(dest)) {
+                            fos.write(bytes);
+                            fos.flush();
+                            success = true;
+                        }
+                    }
+
+                    final boolean finalSuccess = success;
+                    final String finalName = safeName;
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (finalSuccess) {
+                                Toast.makeText(context, "Saved to Downloads: " + finalName, Toast.LENGTH_LONG).show();
+                            } else {
+                                Toast.makeText(context, "Failed to save " + finalName, Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+                } catch (final Exception e) {
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(context, "Download error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            }
+        }).start();
+    }
+
+    public void downloadHttpFile(final String downloadUrl, final String filename, final String mimeType) {
+        if (downloadUrl == null || downloadUrl.isEmpty()) return;
+        final Context context = getContext();
+        try {
+            String safeName = (filename != null && !filename.trim().isEmpty()) ? filename : URLUtil.guessFileName(downloadUrl, null, mimeType);
+            safeName = safeName.replaceAll("[\\\\/:*?\"<>|]", "_");
+
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(downloadUrl));
+            if (mimeType != null && !mimeType.isEmpty()) {
+                request.setMimeType(mimeType);
+            }
+            request.setTitle(safeName);
+            request.setDescription("Downloading article...");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, safeName);
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                request.allowScanningByMediaScanner();
+            }
+
+            DownloadManager dm = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
+            if (dm != null) {
+                dm.enqueue(request);
+                final String finalName = safeName;
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(context, "Downloading " + finalName + "...", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        } catch (final Exception e) {
+            new Handler(Looper.getMainLooper()).post(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(context, "Download failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
     }
 
     @Override

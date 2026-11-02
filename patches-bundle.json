@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-02T03:31:50",
-  "description": "## [1.12.0](https://github.com/RayBourn/medium/compare/v1.11.3...v1.12.0) (2026-11-02)\n\n### ✨ New Features\n\n* add ExamplePatch for unlocking Medium articles via Freedium ([3ad231b](https://github.com/RayBourn/medium/commit/3ad231b4692aa012e110d506fbd4093bd1cf0504))",
-  "download_url": "https://github.com/RayBourn/medium/releases/download/v1.12.0/patches-1.12.0.mpp",
+  "created_at": "2026-11-02T18:11:30",
+  "description": "## [1.13.0](https://github.com/RayBourn/medium/compare/v1.12.0...v1.13.0) (2026-11-02)\n\n### ✨ New Features\n\n* add FreediumWebViewDialog for in-app article rendering ([1520b20](https://github.com/RayBourn/medium/commit/1520b2090617586f051a20365eb563ad0fffef5f))",
+  "download_url": "https://github.com/RayBourn/medium/releases/download/v1.13.0/patches-1.13.0.mpp",
   "signature_download_url": "",
-  "version": "1.12.0"
+  "version": "1.13.0"
 }

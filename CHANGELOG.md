@@ -1,3 +1,9 @@
+## [1.13.0](https://github.com/RayBourn/medium/compare/v1.12.0...v1.13.0) (2026-11-02)
+
+### ✨ New Features
+
+* add FreediumWebViewDialog for in-app article rendering ([1520b20](https://github.com/RayBourn/medium/commit/1520b2090617586f051a20365eb563ad0fffef5f))
+
 ## [1.12.0](https://github.com/RayBourn/medium/compare/v1.11.3...v1.12.0) (2026-11-02)
 
 ### ✨ New Features
