@@ -23,21 +23,6 @@ public class FreediumWebViewDialog extends Dialog {
     private WebView webView;
     private volatile boolean isLightboxOpen = false;
 
-    public static class LightboxBridge {
-        private final FreediumWebViewDialog dialog;
-
-        public LightboxBridge(FreediumWebViewDialog dialog) {
-            this.dialog = dialog;
-        }
-
-        @JavascriptInterface
-        public void setLightboxVisible(boolean visible) {
-            if (dialog != null) {
-                dialog.isLightboxOpen = visible;
-            }
-        }
-    }
-
     public FreediumWebViewDialog(Context context, String url) {
         super(context, android.R.style.Theme_DeviceDefault_NoActionBar);
         this.url = url;
@@ -170,22 +155,18 @@ public class FreediumWebViewDialog extends Dialog {
         settings.setLoadWithOverviewMode(false);
         settings.setTextZoom(100);
 
-        webView.addJavascriptInterface(new LightboxBridge(this), "AndroidBridge");
+        webView.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public void setLightboxVisible(boolean visible) {
+                isLightboxOpen = visible;
+            }
+        }, "AndroidBridge");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 view.loadUrl(url);
                 return true;
-            }
-
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                if (request != null && request.getUrl() != null) {
-                    view.loadUrl(request.getUrl().toString());
-                    return true;
-                }
-                return false;
             }
 
             @Override
@@ -258,7 +239,7 @@ public class FreediumWebViewDialog extends Dialog {
                 "  overflow-x: hidden !important; " +
                 "  box-sizing: border-box !important; " +
                 "} " +
-                "main, #svelte, [class*='wrapper'], [class*='card'], [class*='shadow'], div[class*='max-w-'], div[class*='mx-auto'], .container, [class*='container'], [class*='px-'], [class*='p-'] { " +
+                "main, #svelte, [class*='wrapper'], [class*='card'], [class*='shadow'], div[class*='max-w-'], div[class*='mx-auto'], .container, [class*='container'] { " +
                 "  width: 100% !important; " +
                 "  max-width: 100% !important; " +
                 "  margin-left: 0 !important; " +
@@ -276,8 +257,8 @@ public class FreediumWebViewDialog extends Dialog {
                 "  width: 100% !important; " +
                 "  max-width: 100% !important; " +
                 "  margin: 0 auto !important; " +
-                "  padding-left: 0 !important; " +
-                "  padding-right: 0 !important; " +
+                "  padding-left: 16px !important; " +
+                "  padding-right: 16px !important; " +
                 "  box-sizing: border-box !important; " +
                 "  background: transparent !important; " +
                 "  background-color: transparent !important; " +
@@ -301,7 +282,7 @@ public class FreediumWebViewDialog extends Dialog {
                 "  background-color: transparent !important; " +
                 "  color: inherit !important; " +
                 "  border-color: " + borderColor + " !important; " +
-                "  margin: 1rem 16px !important; " +
+                "  margin: 1rem 0 !important; " +
                 "  box-sizing: border-box !important; " +
                 "} " +
                 "p, li, blockquote, dd, dt { " +
@@ -312,11 +293,6 @@ public class FreediumWebViewDialog extends Dialog {
                 "  margin-bottom: 1.5rem !important; " +
                 "  letter-spacing: -0.003em !important; " +
                 "  word-break: break-word !important; " +
-                "  padding-left: 16px !important; " +
-                "  padding-right: 16px !important; " +
-                "  box-sizing: border-box !important; " +
-                "} " +
-                "li > p, blockquote > p, dd > p { " +
                 "  padding-left: 0 !important; " +
                 "  padding-right: 0 !important; " +
                 "} " +
@@ -329,9 +305,8 @@ public class FreediumWebViewDialog extends Dialog {
                 "  margin-top: 1.5rem !important; " +
                 "  margin-bottom: 0.8rem !important; " +
                 "  letter-spacing: -0.015em !important; " +
-                "  padding-left: 16px !important; " +
-                "  padding-right: 16px !important; " +
-                "  box-sizing: border-box !important; " +
+                "  padding-left: 0 !important; " +
+                "  padding-right: 0 !important; " +
                 "} " +
                 "h2, h3, h4, h5, h6 { " +
                 "  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; " +
@@ -340,26 +315,18 @@ public class FreediumWebViewDialog extends Dialog {
                 "  line-height: 1.3 !important; " +
                 "  margin-top: 1.6rem !important; " +
                 "  margin-bottom: 0.6rem !important; " +
-                "  padding-left: 16px !important; " +
-                "  padding-right: 16px !important; " +
-                "  box-sizing: border-box !important; " +
+                "  padding-left: 0 !important; " +
+                "  padding-right: 0 !important; " +
                 "} " +
-                "figure { " +
-                "  width: 100% !important; " +
-                "  max-width: 100% !important; " +
-                "  margin-left: 0 !important; " +
-                "  margin-right: 0 !important; " +
-                "  margin-top: 1.5rem !important; " +
-                "  margin-bottom: 1.5rem !important; " +
-                "  padding: 0 !important; " +
-                "  box-sizing: border-box !important; " +
-                "} " +
-                "img { " +
-                "  width: 100% !important; " +
-                "  max-width: 100% !important; " +
+                "figure, article img, .prose img, main img { " +
+                "  width: calc(100% + 32px) !important; " +
+                "  max-width: calc(100% + 32px) !important; " +
                 "  height: auto !important; " +
                 "  display: block !important; " +
-                "  margin: 0 auto !important; " +
+                "  margin-left: -16px !important; " +
+                "  margin-right: -16px !important; " +
+                "  margin-top: 1.5rem !important; " +
+                "  margin-bottom: 1.5rem !important; " +
                 "  border-radius: 0 !important; " +
                 "  box-sizing: border-box !important; " +
                 "  cursor: zoom-in !important; " +
@@ -370,6 +337,8 @@ public class FreediumWebViewDialog extends Dialog {
                 "  height: auto !important; " +
                 "  display: inline-block !important; " +
                 "  margin: 0 4px !important; " +
+                "  margin-left: 0 !important; " +
+                "  margin-right: 4px !important; " +
                 "  border-radius: 50% !important; " +
                 "  cursor: default !important; " +
                 "} " +
@@ -378,9 +347,8 @@ public class FreediumWebViewDialog extends Dialog {
                 "  color: " + subText + " !important; " +
                 "  text-align: center !important; " +
                 "  display: block !important; " +
-                "  padding-left: 16px !important; " +
-                "  padding-right: 16px !important; " +
-                "  box-sizing: border-box !important; " +
+                "  padding-left: 0 !important; " +
+                "  padding-right: 0 !important; " +
                 "} " +
                 "span, a { " +
                 "  color: inherit !important; " +
