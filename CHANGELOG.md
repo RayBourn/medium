@@ -1,3 +1,9 @@
+## [1.12.0](https://github.com/RayBourn/medium/compare/v1.11.3...v1.12.0) (2026-11-02)
+
+### ✨ New Features
+
+* add ExamplePatch for unlocking Medium articles via Freedium ([3ad231b](https://github.com/RayBourn/medium/commit/3ad231b4692aa012e110d506fbd4093bd1cf0504))
+
 ## [1.11.3](https://github.com/RayBourn/medium/compare/v1.11.2...v1.11.3) (2026-11-01)
 
 ### 🐛 Bug Fixes
