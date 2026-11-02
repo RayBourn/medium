@@ -1,3 +1,9 @@
+## [1.14.0](https://github.com/RayBourn/medium/compare/v1.13.0...v1.14.0) (2026-11-02)
+
+### ✨ New Features
+
+* add FreediumWebViewDialog for article loading and downloads ([1ce2499](https://github.com/RayBourn/medium/commit/1ce249904c2b877a2233577565d78d0296eebbb0))
+
 ## [1.13.0](https://github.com/RayBourn/medium/compare/v1.12.0...v1.13.0) (2026-11-02)
 
 ### ✨ New Features
